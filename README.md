@@ -159,7 +159,7 @@ installer packaging for OSes you can build on.
 
 ## License
 
-MIT — see [`LICENSE`](LICENSE).
+MIT — see [`LICENSE`](LICENSE). *(Add the file; see follow-up steps.)*
 
 ## Acknowledgements
 
