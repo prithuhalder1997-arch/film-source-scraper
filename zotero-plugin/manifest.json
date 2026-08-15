@@ -1,0 +1,20 @@
+{
+  "manifest_version": 2,
+  "name": "Film Source Scraper",
+  "version": "1.0.0",
+  "description": "Right-click a collection to auto-scrape reviews, interviews, criticism, Reddit posts and papers for a film, with Wayback paywall fallback. Requires the local Capture Engine.",
+  "author": "Prithu Halder",
+  "homepage_url": "https://github.com/prithuhalder1997-arch/film-source-scraper",
+  "applications": {
+    "zotero": {
+      "id": "film-source-scraper@prithuhalder.com",
+      "update_url": "https://raw.githubusercontent.com/prithuhalder1997-arch/film-source-scraper/main/updates.json",
+      "strict_min_version": "6.999",
+      "strict_max_version": "7.1.*"
+    }
+  },
+  "icons": {
+    "48": "content/icon48.png",
+    "96": "content/icon96.png"
+  }
+}

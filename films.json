@@ -1,0 +1,24 @@
+{
+  "films": [
+    { "title": "Om Dar-B-Dar", "director": "Kamal Swaroop", "year": 1988 },
+    { "title": "GKJKLJRH", "director": "", "year": null },
+    { "title": "Fairy Folk", "director": "Karan Gour", "year": 2023 },
+    { "title": "Jugnuma: The Fable", "director": "Raam Reddy", "year": 2024 },
+    { "title": "Harbart", "director": "Suman Mukhopadhyay", "year": 2005 },
+    { "title": "Midnight's Children", "director": "Deepa Mehta", "year": 2012 },
+    { "title": "Kangal Malsat", "director": "Suman Mukhopadhyay", "year": 2013 },
+    { "title": "Ashwatthama", "director": "Pushpendra Singh", "year": 2017 },
+    { "title": "Dracula Sir", "director": "Debaloy Bhattacharya", "year": 2020 },
+    { "title": "Bhotbhoti", "director": "Tathagata Mukherjee", "year": 2022 },
+    { "title": "Sister Midnight", "director": "Karan Kandhari", "year": 2024 },
+    { "title": "Winkle Twinkle", "director": "Rahool Mukherjee", "year": 2023 }
+  ],
+  "query_templates": {
+    "review":    "\"{title}\" film review",
+    "criticism": "\"{title}\" {director} film analysis criticism",
+    "interview": "\"{director}\" interview \"{title}\"",
+    "news":      "\"{title}\" film {year}",
+    "reddit":    "\"{title}\" site:reddit.com",
+    "paper":     "\"{title}\" {director} cinema filetype:pdf"
+  }
+}
