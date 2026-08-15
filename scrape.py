@@ -136,19 +136,30 @@ def ensure_collection(name):
     """
     (OUTDIR / safe(name)).mkdir(parents=True, exist_ok=True)
 
-def save_snapshot(url, title, film, status="live"):
-    """Save an HTML page as a Zotero snapshot, tagged with film + capture status."""
+def save_snapshot(url, title, film, status="live", html=None):
+    """Save an HTML page as a Zotero snapshot, tagged with film + capture status.
+    Zotero's saveSnapshot works most reliably when given the page HTML directly,
+    so we fetch it if the caller didn't supply it."""
+    if html is None:
+        try:
+            resp = requests.get(url, headers={"User-Agent": UA}, timeout=30)
+            html = resp.text
+        except Exception:
+            html = ""   # fall back to letting Zotero try to fetch
     payload = {
         "url": url,
         "title": title or url,
-        "html": None,          # let Zotero fetch+snapshot server-side
+        "html": html,
         "tags": [{"tag": film}, {"tag": f"capture:{status}"}],
     }
     if TARGET_COLLECTION:
         payload["collections"] = [TARGET_COLLECTION]
     try:
         r = requests.post(f"{ZOTERO}/connector/saveSnapshot",
-                          json=payload, headers={"User-Agent": UA}, timeout=60)
+                          json=payload,
+                          headers={"User-Agent": UA,
+                                   "zotero-allowed-request": "1"},
+                          timeout=60)
         return r.status_code in (200, 201)
     except Exception as e:
         print(f"      ! snapshot save failed: {e}")
@@ -175,7 +186,10 @@ def save_pdf_item(pdf_path, url, title, film):
         payload["collections"] = [TARGET_COLLECTION]
     try:
         r = requests.post(f"{ZOTERO}/connector/saveItems",
-                          json=payload, headers={"User-Agent": UA}, timeout=60)
+                          json=payload,
+                          headers={"User-Agent": UA,
+                                   "zotero-allowed-request": "1"},
+                          timeout=60)
         return r.status_code in (200, 201)
     except Exception as e:
         print(f"      ! item save failed: {e}")
