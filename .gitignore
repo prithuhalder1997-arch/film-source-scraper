@@ -1,0 +1,11 @@
+config.json
+.env
+*.key
+build/
+dist/
+__pycache__/
+*.pyc
+downloads/
+*.xpi
+.DS_Store
+Thumbs.db
