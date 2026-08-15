@@ -61,11 +61,14 @@ its CLI. See [`ARCHITECTURE.md`](ARCHITECTURE.md) for the full rationale.
 1. **Install the Capture Engine.** Download the installer for your OS from the
    [Releases page](../../releases) and run it (drag to Applications on macOS,
    run the `.exe` on Windows, or the `.AppImage` on Linux).
-2. **Launch the engine and add your search key.** On first run it opens a
-   `config.json` file — paste a free [Brave Search API key](https://brave.com/search/api)
-   between the quotes, save, and relaunch. (It works without a key using a
-   slower fallback, but a key is strongly recommended — the free tier covers
-   dozens of full runs.)
+2. **Launch the engine and add a search key.** On first run it opens a
+   `config.json` file. Paste a free **[Tavily](https://tavily.com)** API key
+   between the quotes, save, and relaunch. Tavily is recommended because it
+   needs **no credit card** and gives **1,000 free searches per month** — each
+   film uses ~6 searches, so that's roughly 160 film-runs a month, and it
+   resets monthly. (Other providers work too — see Search providers below. The
+   engine also runs with no key at all, using a slower DuckDuckGo fallback that
+   often returns few results.)
 3. **Install the Zotero plugin.** In Zotero: **Tools → Add-ons → gear icon →
    Install Add-on From File** → pick `film-source-scraper.xpi` from Releases.
 
@@ -81,6 +84,32 @@ The collection name *is* the search — no config to edit per film.
 
 ---
 
+## Search providers & limits
+
+The scraper needs a search provider to find sources. It tries whichever you've
+configured, in priority order, and falls back to the next if one isn't set or
+returns nothing:
+
+| Provider | Credit card? | Free allowance | Set env var |
+|----------|--------------|----------------|-------------|
+| **Tavily** (recommended) | No | 1,000 searches/month | `TAVILY_API_KEY` |
+| Serper | No | 2,500 one-time trial | `SERPER_API_KEY` |
+| Brave | Yes (as of 2026) | $5/mo credit | `BRAVE_API_KEY` |
+| DuckDuckGo | No key at all | unreliable, last resort | — |
+
+**How much does a run cost?** One film = ~6 searches (one per source type:
+review, criticism, interview, news, reddit, paper). On Tavily's free tier
+(1,000/month) that's roughly **160 film-runs per month**, resetting monthly.
+For a 12-film thesis library, a full sweep is ~72 searches — you can run the
+whole set many times over within the free allowance.
+
+Set whichever key you have and the scraper uses it automatically. You never put
+the key in the code — it's read from the environment (`config.json` for the
+packaged app, or an env var when running from source), which is why no key ever
+ends up in this repo.
+
+---
+
 ## Run from source (developers)
 
 You don't need the packaged app to use this; the pipeline runs standalone.
@@ -91,7 +120,8 @@ cd film-source-scraper
 pip install -r engine/requirements.txt
 python -m playwright install chromium
 
-export BRAVE_API_KEY=...          # from brave.com/search/api
+export TAVILY_API_KEY=...         # free, no card, from tavily.com
+# (or SERPER_API_KEY / BRAVE_API_KEY — whichever you have; see Search providers below)
 ```
 
 **As a CLI** (edit your film list in `films.json`):
@@ -140,7 +170,9 @@ plugin. Attach all of them to a GitHub Release.
 
 ## How it works under the hood
 
-- **Discovery** — Brave Search API (DuckDuckGo HTML as a no-key fallback).
+- **Discovery** — tries your configured search provider in priority order:
+  Tavily → Serper → Brave → DuckDuckGo (keyless last-resort). See Search
+  providers below.
 - **Capture** — headless Chromium via Playwright; auto-scrolls for lazy content,
   full-page PNG.
 - **Paywall agent** (`paywall_agent.py`) — deterministic decision loop: detect
@@ -164,5 +196,5 @@ MIT — see [`LICENSE`](LICENSE). *(Add the file; see follow-up steps.)*
 ## Acknowledgements
 
 Wayback fallback uses the [Internet Archive](https://archive.org) CDX and Save
-APIs. Search via the [Brave Search API](https://brave.com/search/api). Built to
+APIs. Search via [Tavily](https://tavily.com) (or Serper/Brave). Built to
 sit alongside [Zotero](https://www.zotero.org).
