@@ -37,35 +37,85 @@ UA         = ("Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 "
 
 # ---------------------------------------------------------------- search ----
 
+# API keys for keyless-signup providers (account only, NO credit card).
+# Set whichever one(s) you have; the search layer tries them in order.
+TAVILY_KEY = os.environ.get("TAVILY_API_KEY", "")     # tavily.com  (1000/mo, no card)
+SERPER_KEY = os.environ.get("SERPER_API_KEY", "")     # serper.dev  (2500 trial, no card)
+
+def _search_tavily(query, count):
+    """Tavily search API — no credit card required, 1000 credits/month.
+    Uses the current Bearer-header auth style per Tavily docs."""
+    r = requests.post("https://api.tavily.com/search",
+        headers={"Authorization": f"Bearer {TAVILY_KEY}",
+                 "Content-Type": "application/json"},
+        json={"query": query, "max_results": count, "search_depth": "basic"},
+        timeout=20)
+    r.raise_for_status()
+    res = r.json().get("results", [])
+    return [{"url": x["url"], "title": x.get("title", "")} for x in res[:count]]
+
+def _search_serper(query, count):
+    """Serper.dev Google results — no card, 2500 trial queries."""
+    r = requests.post("https://google.serper.dev/search",
+        headers={"X-API-KEY": SERPER_KEY, "Content-Type": "application/json"},
+        json={"q": query, "num": count}, timeout=20)
+    r.raise_for_status()
+    org = r.json().get("organic", [])
+    return [{"url": x["link"], "title": x.get("title", "")} for x in org[:count]]
+
+def _search_brave(query, count):
+    """Brave Search API — requires a card on file as of 2026."""
+    r = requests.get(BRAVE_URL,
+        headers={"X-Subscription-Token": BRAVE_KEY, "Accept": "application/json"},
+        params={"q": query, "count": count}, timeout=20)
+    r.raise_for_status()
+    web = r.json().get("web", {}).get("results", [])
+    return [{"url": x["url"], "title": x.get("title", "")} for x in web[:count]]
+
+def _search_ddg_html(query, count):
+    """Last-resort scrape of DuckDuckGo HTML. Often 403s from datacenters;
+    usually works from a residential connection. No key needed."""
+    r = requests.post("https://html.duckduckgo.com/html/",
+                      data={"q": query}, headers={"User-Agent": UA}, timeout=20)
+    if r.status_code != 200:
+        raise RuntimeError(f"ddg http {r.status_code}")
+    hits = re.findall(r'result__a"[^>]+href="([^"]+)"[^>]*>(.*?)</a>', r.text)
+    out = []
+    for href, title in hits[:count]:
+        u = urllib.parse.unquote(href)
+        m = re.search(r'uddg=([^&]+)', u)
+        if m:
+            u = urllib.parse.unquote(m.group(1))
+        out.append({"url": u, "title": re.sub("<[^>]+>", "", title)})
+    if not out:
+        raise RuntimeError("ddg returned no results")
+    return out
+
 def search(query, count=PER_SOURCE):
-    """Return list of {url,title} from Brave. Falls back to DuckDuckGo HTML."""
-    if BRAVE_KEY:
+    """
+    Try each configured search provider in priority order until one returns
+    results. Keyless-signup APIs (Tavily, Serper) come first because they're
+    reliable and need no credit card; Brave next (needs a card); raw engine
+    scraping is the last resort. Whichever the user has a key for wins.
+    """
+    providers = []
+    if TAVILY_KEY: providers.append(("tavily", _search_tavily))
+    if SERPER_KEY: providers.append(("serper", _search_serper))
+    if BRAVE_KEY:  providers.append(("brave",  _search_brave))
+    providers.append(("ddg", _search_ddg_html))   # always available, may fail
+
+    last_err = None
+    for name, fn in providers:
         try:
-            r = requests.get(BRAVE_URL,
-                headers={"X-Subscription-Token": BRAVE_KEY,
-                         "Accept": "application/json"},
-                params={"q": query, "count": count}, timeout=20)
-            r.raise_for_status()
-            web = r.json().get("web", {}).get("results", [])
-            return [{"url": x["url"], "title": x.get("title", "")} for x in web[:count]]
+            results = fn(query, count)
+            if results:
+                return results
         except Exception as e:
-            print(f"    ! brave failed ({e}); falling back to ddg")
-    # Fallback: DuckDuckGo HTML (no key, less reliable, rate-limited)
-    try:
-        r = requests.post("https://html.duckduckgo.com/html/",
-                          data={"q": query}, headers={"User-Agent": UA}, timeout=20)
-        hits = re.findall(r'result__a"[^>]+href="([^"]+)"[^>]*>(.*?)</a>', r.text)
-        out = []
-        for href, title in hits[:count]:
-            u = urllib.parse.unquote(href)
-            m = re.search(r'uddg=([^&]+)', u)
-            if m:
-                u = urllib.parse.unquote(m.group(1))
-            out.append({"url": u, "title": re.sub("<[^>]+>", "", title)})
-        return out
-    except Exception as e:
-        print(f"    ! ddg fallback failed ({e})")
-        return []
+            last_err = f"{name}: {e}"
+            continue
+    if last_err:
+        print(f"    ! all search providers failed (last: {last_err})")
+    return []
 
 # ------------------------------------------------------------ zotero api ----
 
